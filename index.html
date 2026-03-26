@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilha Financeira da Casa</title>
+    <!-- Chamada do Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Cor da barra de status no celular -->
+    <meta name="theme-color" content="#3498db">
+    
+    <script>
+        // Registra o Service Worker para permitir a instalação
+        if ('service-worker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <!-- Tela de Login (Corrigida: Sem Form) -->
+    <div class="bloco" id="tela-login">
+        <h2>Identificação</h2>
+        <p style="margin-bottom: 10px; color: var(--cor-texto);">Informe seu nome para acessar a planilha.</p>
+        <input type="text" id="nome_usuario" placeholder="Ex: Cassiano ou Ariele" style="margin-bottom: 15px; width: 100%; max-width: 300px; display: block;">
+        <button onclick="liberarApp()">Acessar Planilha</button>
+    </div>
+
+    <!-- App Principal -->
+    <div id="app-planilha" style="display:none;">
+        
+        <button class="btn-darkmode" onclick="toggleDarkMode()">🌓 Alternar Tema Claro/Escuro</button>
+
+        <!-- SISTEMA DE BACKUP -->
+        <div class="bloco" style="text-align: center; border-color: #2ecc71; background-color: rgba(46, 204, 113, 0.05);">
+            <h3 style="color: #27ae60; border-bottom: none; margin-bottom: 5px;">💾 Backup e Segurança</h3>
+            <p style="font-size: 14px; margin-bottom: 15px; color: var(--cor-texto);">Salve sua planilha ou carregue um backup anterior.</p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="exportarBackup()" style="background-color: #27ae60;">📥 Baixar Backup</button>
+                <button onclick="document.getElementById('fileImport').click()" style="background-color: #8e44ad;">📤 Restaurar Backup</button>
+                <input type="file" id="fileImport" style="display: none;" accept=".json" onchange="importarBackup(event)">
+            </div>
+        </div>
+
+        <h2>Controle Financeiro da Casa</h2>
+
+        <div class="bloco controle-mes">
+            <label for="seletorMes">📅 Mês de Referência: </label>
+            <input type="month" id="seletorMes" onchange="carregarDados()">
+        </div>
+
+        <div class="bloco">
+            <h3>1. Rendas e Entradas</h3>
+            <div class="linha-inputs">
+                <label>Ariele</label>
+                <input type="number" id="salarioAriele" min="0" placeholder="Salário (R$)" oninput="calcular()">
+                <input type="number" id="extraAriele" min="0" placeholder="Renda Extra (R$)" oninput="calcular()">
+            </div>
+            <div class="linha-inputs">
+                <label>Cassiano</label>
+                <input type="number" id="salarioCassiano" min="0" placeholder="Salário (R$)" oninput="calcular()">
+                <input type="number" id="extraCassiano" min="0" placeholder="Renda Extra (R$)" oninput="calcular()">
+            </div>
+        </div>
+
+        <div class="bloco">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <h3>2. Custos Fixos da Casa</h3>
+                <select id="ordenarFixos" onchange="ordenarContas()">
+                    <option value="padrao">Ordenar: Padrão</option>
+                    <option value="dataCrescente">Ordenar por: Data de Vencimento</option>
+                    <option value="valorDecrescente">Ordenar por: Maior Valor</option>
+                    <option value="valorCrescente">Ordenar por: Menor Valor</option>
+                </select>
+            </div>
+            
+            <div id="lista-fixos"></div>
+            <button onclick="addFixoHTML('', '', '', false)">+ Adicionar Custo Fixo</button>
+            <h4 style="text-align: right; margin-top: 15px;">Total Fixo da Casa: R$ <span id="resFixoTotal">0.00</span></h4>
+            <h4 style="text-align: right; color: var(--cor-atencao-texto);">Parte de cada um (/2): R$ <span id="resFixoDividido">0.00</span></h4>
+        </div>
+
+        <div class="bloco">
+            <h3>3. Custos Individuais e Dívidas</h3>
+            <div class="resumo-grid">
+                <div>
+                    <h4>Contas Ariele</h4>
+                    <div id="lista-indiv-ariele"></div>
+                    <button onclick="addIndivHTML('ariele', '', '')">+ Adicionar Conta</button>
+                    <div class="bloco-divida">
+                        <label>Quitação de Dívidas (R$):</label>
+                        <input type="number" id="dividaAriele" min="0" placeholder="Ex: Cartão, Empréstimo" oninput="calcular()">
+                    </div>
+                </div>
+                <div>
+                    <h4>Contas Cassiano</h4>
+                    <div id="lista-indiv-cassiano"></div>
+                    <button onclick="addIndivHTML('cassiano', '', '')">+ Adicionar Conta</button>
+                    <div class="bloco-divida">
+                        <label>Quitação de Dívidas (R$):</label>
+                        <input type="number" id="dividaCassiano" min="0" placeholder="Ex: Cartão, Empréstimo" oninput="calcular()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bloco">
+            <h3 style="text-align: center;">📊 Distribuição de Gastos</h3>
+            <div class="grafico-container">
+                <canvas id="chartResumo"></canvas>
+            </div>
+        </div>
+
+        <div class="bloco">
+            <h3>4. Resumo Financeiro</h3>
+            <div class="resumo-grid">
+                <div class="bloco cartao-resumo">
+                    <h4>Balanço Ariele</h4>
+                    <p>Total Recebido: R$ <span id="resRendaAriele">0.00</span></p>
+                    <p>Custo Fixo (Metade): R$ <span class="resFixoParte">0.00</span></p>
+                    <p>Custos Indiv. + Dívidas: R$ <span id="resIndivAriele">0.00</span></p>
+                    <hr>
+                    <p id="boxAriele" class="alivio">Saldo Final: R$ <span id="resSaldoAriele">0.00</span></p>
+                    <div id="investAriele" class="sugestao-investimento" style="display:none;"></div>
+                </div>
+
+                <div class="bloco cartao-resumo">
+                    <h4>Balanço Cassiano</h4>
+                    <p>Total Recebido: R$ <span id="resRendaCassiano">0.00</span></p>
+                    <p>Custo Fixo (Metade): R$ <span class="resFixoParte">0.00</span></p>
+                    <p>Custos Indiv. + Dívidas: R$ <span id="resIndivCassiano">0.00</span></p>
+                    <hr>
+                    <p id="boxCassiano" class="alivio">Saldo Final: R$ <span id="resSaldoCassiano">0.00</span></p>
+                    <div id="investCassiano" class="sugestao-investimento" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

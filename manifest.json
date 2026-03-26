@@ -1,0 +1,16 @@
+{
+  "name": "Planilha Financeira Familiar",
+  "short_name": "MinhaPlanilha",
+  "description": "Gestão financeira mensal para Ariele e Cassiano",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2652/2652677.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

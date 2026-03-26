@@ -1,0 +1,102 @@
+/* Definindo Variáveis de Cores (Claro / Escuro) */
+:root {
+    --bg-fundo: #f4f7f6;
+    --bg-container: #ffffff;
+    --bg-bloco: #fafafa;
+    --cor-texto: #333333;
+    --cor-borda: #e0e0e0;
+    --cor-primaria: #3498db;
+    --cor-alivio-bg: #d4edda;
+    --cor-alivio-texto: #155724;
+    --cor-atencao-bg: #f8d7da;
+    --cor-atencao-texto: #721c24;
+}
+
+/* Modo Escuro (Aplicado quando a classe dark-mode for ativada no body) */
+body.dark-mode {
+    --bg-fundo: #121212;
+    --bg-container: #1e1e1e;
+    --bg-bloco: #2a2a2a;
+    --cor-texto: #e0e0e0;
+    --cor-borda: #444444;
+    --cor-alivio-bg: #1e4620;
+    --cor-alivio-texto: #8fdf9f;
+    --cor-atencao-bg: #5a1a1e;
+    --cor-atencao-texto: #ff9999;
+}
+
+/* Base com Transições Suaves */
+body { 
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    background-color: var(--bg-fundo); 
+    color: var(--cor-texto); 
+    margin: 0; padding: 20px; 
+    transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.container { 
+    max-width: 900px; margin: auto; 
+    background: var(--bg-container); padding: 25px; 
+    border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); 
+    transition: background-color 0.4s ease;
+}
+
+h2, h3, h4 { color: var(--cor-texto); border-bottom: 2px solid var(--cor-borda); padding-bottom: 5px; }
+
+/* Blocos flutuantes */
+.bloco { 
+    margin-bottom: 25px; padding: 20px; 
+    border: 1px solid var(--cor-borda); border-radius: 8px; 
+    background-color: var(--bg-bloco); 
+    transition: transform 0.2s, background-color 0.4s, border-color 0.4s;
+}
+.bloco:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+.cartao-resumo { background: var(--bg-container) !important; }
+
+/* Controles de Mês e Filtro */
+.controle-mes { background-color: rgba(52, 152, 219, 0.1); text-align: center; border: none; }
+.controle-mes label { font-size: 18px; font-weight: bold; color: var(--cor-primaria); }
+input[type="month"], select#ordenarFixos { 
+    font-size: 16px; padding: 10px; border-radius: 6px; 
+    border: 2px solid var(--cor-borda); background: var(--bg-container); color: var(--cor-texto);
+}
+
+/* Inputs Otimizados para Celular (16px evita o zoom no iOS) */
+.linha-inputs { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.linha-inputs label { font-weight: bold; width: 100%; font-size: 14px; color: var(--cor-texto); opacity: 0.8; }
+input[type="text"], input[type="number"] { 
+    padding: 10px; border: 2px solid var(--cor-borda); border-radius: 6px; 
+    flex: 1; min-width: 120px; font-size: 16px; background: var(--bg-container); color: var(--cor-texto);
+    transition: border-color 0.2s;
+}
+input[type="text"]:focus, input[type="number"]:focus { border-color: var(--cor-primaria); outline: none; }
+input[disabled], input[readonly] { opacity: 0.6; cursor: not-allowed; }
+
+/* Botões */
+button { 
+    padding: 10px 18px; background-color: var(--cor-primaria); color: white; 
+    border: none; border-radius: 6px; cursor: pointer; font-weight: bold; 
+    transition: opacity 0.2s, transform 0.1s; 
+}
+button:hover { opacity: 0.9; transform: scale(0.98); }
+button.remover { background-color: #e74c3c; padding: 10px 14px; }
+.btn-darkmode { display: block; width: 100%; margin-bottom: 20px; background-color: #34495e; }
+
+/* Checkbox e Observações */
+.checkbox-pago { transform: scale(1.5); cursor: pointer; margin-right: 8px; accent-color: #27ae60; }
+.input-obs { flex: 2 !important; font-style: italic; font-size: 14px; opacity: 0.8; }
+.linha-paga { background-color: var(--cor-alivio-bg) !important; border-left: 5px solid #27ae60 !important; opacity: 0.85; }
+.linha-paga input.nome-fixo, .linha-paga input.valor-fixo, .linha-paga input.data-fixo, .linha-paga input.nome-indiv, .linha-paga input.valor-indiv { text-decoration: line-through; opacity: 0.6; }
+
+/* Dívidas e Investimentos */
+.bloco-divida { margin-top: 15px; padding-top: 15px; border-top: 2px dashed var(--cor-borda); }
+.bloco-divida label { font-weight: bold; color: var(--cor-atencao-texto); display: block; margin-bottom: 5px; }
+.sugestao-investimento { margin-top: 15px; padding: 12px; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 5px; font-size: 14px; line-height: 1.4; animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+
+/* Resultados e Gráficos */
+.alivio { color: var(--cor-alivio-texto); background-color: var(--cor-alivio-bg); padding: 12px; border-radius: 6px; font-weight: bold; border: 1px solid rgba(0,0,0,0.1); }
+.atencao { color: var(--cor-atencao-texto); background-color: var(--cor-atencao-bg); padding: 12px; border-radius: 6px; font-weight: bold; border: 1px solid rgba(0,0,0,0.1); }
+.resumo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width: 600px) { .resumo-grid { grid-template-columns: 1fr; } }
+.grafico-container { height: 300px; width: 100%; position: relative; }
