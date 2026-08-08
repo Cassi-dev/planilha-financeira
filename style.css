@@ -43,6 +43,14 @@ body {
 
 h2, h3, h4 { color: var(--cor-texto); border-bottom: 2px solid var(--cor-borda); padding-bottom: 5px; }
 
+/* Cabeçalho: título + ações (tema / trocar usuário) lado a lado */
+.app-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.app-header h2 { border-bottom: none; margin: 0; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.header-actions button { font-size: 13px; padding: 8px 12px; }
+.btn-darkmode { background-color: #34495e; }
+.btn-trocar-usuario { background-color: #7f8c8d; }
+
 /* Blocos flutuantes */
 .bloco { 
     margin-bottom: 25px; padding: 20px; 
@@ -64,12 +72,13 @@ input[type="month"], select#ordenarFixos {
 /* Inputs Otimizados para Celular (16px evita o zoom no iOS) */
 .linha-inputs { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
 .linha-inputs label { font-weight: bold; width: 100%; font-size: 14px; color: var(--cor-texto); opacity: 0.8; }
-input[type="text"], input[type="number"] { 
+.input-nome-pessoa { font-weight: bold; max-width: 180px; }
+input[type="text"], input[type="number"], input[type="date"] { 
     padding: 10px; border: 2px solid var(--cor-borda); border-radius: 6px; 
     flex: 1; min-width: 120px; font-size: 16px; background: var(--bg-container); color: var(--cor-texto);
     transition: border-color 0.2s;
 }
-input[type="text"]:focus, input[type="number"]:focus { border-color: var(--cor-primaria); outline: none; }
+input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus { border-color: var(--cor-primaria); outline: none; }
 input[disabled], input[readonly] { opacity: 0.6; cursor: not-allowed; }
 
 /* Botões */
@@ -80,7 +89,6 @@ button {
 }
 button:hover { opacity: 0.9; transform: scale(0.98); }
 button.remover { background-color: #e74c3c; padding: 10px 14px; }
-.btn-darkmode { display: block; width: 100%; margin-bottom: 20px; background-color: #34495e; }
 
 /* Checkbox e Observações */
 .checkbox-pago { transform: scale(1.5); cursor: pointer; margin-right: 8px; accent-color: #27ae60; }
@@ -100,3 +108,10 @@ button.remover { background-color: #e74c3c; padding: 10px 14px; }
 .resumo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media(max-width: 600px) { .resumo-grid { grid-template-columns: 1fr; } }
 .grafico-container { height: 300px; width: 100%; position: relative; }
+
+/* Card combinado do casal — destaque acima dos cards individuais */
+.cartao-casal { text-align: center; margin-bottom: 20px; border: 2px solid var(--cor-primaria); }
+.cartao-casal h4 { border-bottom: none; }
+
+/* Backup: discreto, no fim da página */
+.bloco-backup { text-align: center; border-color: #2ecc71; background-color: rgba(46, 204, 113, 0.05); }
