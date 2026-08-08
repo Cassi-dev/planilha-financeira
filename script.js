@@ -1,28 +1,86 @@
 let meuGrafico = null;
 
+// =====================================================
+// FORMATAÇÃO
+// =====================================================
+
+// Formata número como moeda brasileira (separador de milhar + vírgula decimal)
+function formatarMoeda(valor) {
+    return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// =====================================================
+// INICIALIZAÇÃO E LOGIN PERSISTENTE
+// =====================================================
+
 window.onload = function() {
     const hoje = new Date();
     document.getElementById('seletorMes').value = hoje.toISOString().slice(0, 7);
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.body.classList.add('dark-mode');
     }
+
+    // Se já existe um usuário salvo neste navegador, pula a tela de login
+    const usuarioSalvo = localStorage.getItem('planilhaUsuarioLogado');
+    if (usuarioSalvo) {
+        document.getElementById('tela-login').style.display = 'none';
+        document.getElementById('app-planilha').style.display = 'block';
+        carregarDados();
+    }
 };
 
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
-    calcular(); 
+    calcular();
 }
 
 function liberarApp() {
     const nomeInput = document.getElementById('nome_usuario').value;
     if (nomeInput.trim() === '') {
         alert("Por favor, digite seu nome para acessar!");
-        return; 
+        return;
     }
+    localStorage.setItem('planilhaUsuarioLogado', nomeInput.trim());
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-planilha').style.display = 'block';
-    carregarDados(); 
+    carregarDados();
 }
+
+// Permite trocar de usuário sem apagar os dados já salvos
+function trocarUsuario() {
+    if (!confirm('Deseja trocar de usuário? Seus dados salvos não serão apagados.')) return;
+    localStorage.removeItem('planilhaUsuarioLogado');
+    document.getElementById('app-planilha').style.display = 'none';
+    document.getElementById('tela-login').style.display = 'block';
+    document.getElementById('nome_usuario').value = '';
+}
+
+// =====================================================
+// NOMES DAS PESSOAS (configurável, sem nomes fixos no código)
+// =====================================================
+
+function atualizarNomes() {
+    const nome1 = document.getElementById('nomePessoa1').value.trim() || 'Pessoa 1';
+    const nome2 = document.getElementById('nomePessoa2').value.trim() || 'Pessoa 2';
+
+    document.getElementById('tituloIndivPessoa1').innerText = `Contas ${nome1}`;
+    document.getElementById('tituloIndivPessoa2').innerText = `Contas ${nome2}`;
+    document.getElementById('tituloResumoPessoa1').innerText = `Balanço ${nome1}`;
+    document.getElementById('tituloResumoPessoa2').innerText = `Balanço ${nome2}`;
+
+    calcular();
+}
+
+function obterNomes() {
+    return {
+        nome1: document.getElementById('nomePessoa1').value.trim() || 'Pessoa 1',
+        nome2: document.getElementById('nomePessoa2').value.trim() || 'Pessoa 2'
+    };
+}
+
+// =====================================================
+// LINHAS DINÂMICAS (contas fixas e individuais)
+// =====================================================
 
 function togglePago(id) {
     const elemento = document.getElementById(id);
@@ -31,17 +89,19 @@ function togglePago(id) {
     calcular();
 }
 
+// Custos fixos agora usam <input type="date"> nativo (formato ISO aaaa-mm-dd),
+// eliminando a necessidade de validar formato manualmente por regex.
 function addFixoHTML(nome, valor, data, isBase, pago = false, obs = '') {
     const id = 'fixo-' + Date.now() + Math.floor(Math.random() * 1000);
     const isChecked = pago ? 'checked' : '';
     const classPaga = pago ? 'linha-paga' : '';
-    
+
     const html = `
         <div class="linha-inputs conta-fixa ${classPaga}" id="${id}">
             <input type="checkbox" class="checkbox-pago" title="Marcar como pago" ${isChecked} onchange="togglePago('${id}')">
             <input type="text" class="nome-fixo" value="${nome}" placeholder="Nome da conta" ${isBase ? 'readonly' : ''} oninput="calcular()">
             <input type="number" class="valor-fixo" value="${valor}" min="0" placeholder="R$" oninput="calcular()">
-            <input type="text" class="data-fixo" value="${data}" placeholder="dd/mm/aaaa" onblur="validarData(this)">
+            <input type="date" class="data-fixo" value="${data}" onchange="calcular()">
             <input type="text" class="input-obs obs-fixo" value="${obs}" placeholder="Obs/Atraso..." oninput="calcular()">
             ${!isBase ? `<button class="remover" onclick="removerLinha('${id}')">X</button>` : `<button class="remover" style="visibility:hidden">X</button>`}
         </div>
@@ -49,7 +109,6 @@ function addFixoHTML(nome, valor, data, isBase, pago = false, obs = '') {
     document.getElementById('lista-fixos').insertAdjacentHTML('beforeend', html);
 }
 
-// NOVO: Adicionado o campo "Categoria" no HTML das contas individuais
 function addIndivHTML(pessoa, nome, valor, pago = false, obs = '', categoria = 'Outros') {
     const id = 'indiv-' + Date.now() + Math.floor(Math.random() * 1000);
     const isChecked = pago ? 'checked' : '';
@@ -59,7 +118,7 @@ function addIndivHTML(pessoa, nome, valor, pago = false, obs = '', categoria = '
         <div class="linha-inputs conta-indiv-${pessoa} ${classPaga}" id="${id}">
             <input type="checkbox" class="checkbox-pago" title="Marcar como pago" ${isChecked} onchange="togglePago('${id}')">
             <input type="text" class="nome-indiv" value="${nome}" placeholder="Nome da conta" oninput="calcular()">
-            
+
             <select class="categoria-indiv" onchange="calcular()">
                 <option value="Alimentação" ${categoria === 'Alimentação' ? 'selected' : ''}>🍔 Alimentação</option>
                 <option value="Lazer" ${categoria === 'Lazer' ? 'selected' : ''}>🎬 Lazer</option>
@@ -77,19 +136,18 @@ function addIndivHTML(pessoa, nome, valor, pago = false, obs = '', categoria = '
     document.getElementById(`lista-indiv-${pessoa}`).insertAdjacentHTML('beforeend', html);
 }
 
-function removerLinha(id) { document.getElementById(id).remove(); calcular(); }
-
-function validarData(input) {
-    const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(19|20)\d\d$/;
-    if (input.value && !regex.test(input.value)) {
-        alert("Formato de data inválido. Use dd/mm/aaaa"); input.value = "";
-    }
+// Agora pede confirmação antes de excluir, evitando perda de dado por clique acidental
+function removerLinha(id) {
+    if (!confirm('Remover esta linha? Essa ação não pode ser desfeita.')) return;
+    document.getElementById(id).remove();
     calcular();
 }
 
-function formatarDataParaOrdem(dataStr) {
-    if (!dataStr) return 99999999; 
-    const partes = dataStr.split('/'); return parseInt(`${partes[2]}${partes[1]}${partes[0]}`); 
+// Converte data ISO (aaaa-mm-dd) em timestamp para ordenação; vazio vai para o final
+function paraTimestamp(dataStr) {
+    if (!dataStr) return Infinity;
+    const t = new Date(dataStr).getTime();
+    return isNaN(t) ? Infinity : t;
 }
 
 function ordenarContas() {
@@ -100,77 +158,94 @@ function ordenarContas() {
     linhas.sort((a, b) => {
         const valA = parseFloat(a.querySelector('.valor-fixo').value) || 0;
         const valB = parseFloat(b.querySelector('.valor-fixo').value) || 0;
-        const dataA = formatarDataParaOrdem(a.querySelector('.data-fixo').value);
-        const dataB = formatarDataParaOrdem(b.querySelector('.data-fixo').value);
+        const dataA = paraTimestamp(a.querySelector('.data-fixo').value);
+        const dataB = paraTimestamp(b.querySelector('.data-fixo').value);
         if (tipo === 'valorCrescente') return valA - valB;
         if (tipo === 'valorDecrescente') return valB - valA;
         if (tipo === 'dataCrescente') return dataA - dataB;
-        return 0; 
+        return 0;
     });
     linhas.forEach(linha => lista.appendChild(linha)); salvarDados();
 }
 
-function calcular() {
-    const salAriele = parseFloat(document.getElementById('salarioAriele').value) || 0;
-    const extAriele = parseFloat(document.getElementById('extraAriele').value) || 0;
-    const rendaAriele = salAriele + extAriele;
+// =====================================================
+// CÁLCULO PRINCIPAL
+// =====================================================
 
-    const salCassiano = parseFloat(document.getElementById('salarioCassiano').value) || 0;
-    const extCassiano = parseFloat(document.getElementById('extraCassiano').value) || 0;
-    const rendaCassiano = salCassiano + extCassiano;
+function calcular() {
+    const { nome1, nome2 } = obterNomes();
+
+    const salPessoa1 = parseFloat(document.getElementById('salarioPessoa1').value) || 0;
+    const extPessoa1 = parseFloat(document.getElementById('extraPessoa1').value) || 0;
+    const rendaPessoa1 = salPessoa1 + extPessoa1;
+
+    const salPessoa2 = parseFloat(document.getElementById('salarioPessoa2').value) || 0;
+    const extPessoa2 = parseFloat(document.getElementById('extraPessoa2').value) || 0;
+    const rendaPessoa2 = salPessoa2 + extPessoa2;
 
     let totalFixos = 0;
     document.querySelectorAll('.valor-fixo').forEach(input => totalFixos += parseFloat(input.value) || 0);
     const fixoDividido = totalFixos / 2;
 
-    let indivAriele = 0;
-    document.querySelectorAll('.conta-indiv-ariele .valor-indiv').forEach(i => indivAriele += parseFloat(i.value) || 0);
-    const dividaAriele = parseFloat(document.getElementById('dividaAriele').value) || 0;
-    const totalIndivAriele = indivAriele + dividaAriele;
+    let indivPessoa1 = 0;
+    document.querySelectorAll('.conta-indiv-pessoa1 .valor-indiv').forEach(i => indivPessoa1 += parseFloat(i.value) || 0);
+    const dividaPessoa1 = parseFloat(document.getElementById('dividaPessoa1').value) || 0;
+    const totalIndivPessoa1 = indivPessoa1 + dividaPessoa1;
 
-    let indivCassiano = 0;
-    document.querySelectorAll('.conta-indiv-cassiano .valor-indiv').forEach(i => indivCassiano += parseFloat(i.value) || 0);
-    const dividaCassiano = parseFloat(document.getElementById('dividaCassiano').value) || 0;
-    const totalIndivCassiano = indivCassiano + dividaCassiano;
+    let indivPessoa2 = 0;
+    document.querySelectorAll('.conta-indiv-pessoa2 .valor-indiv').forEach(i => indivPessoa2 += parseFloat(i.value) || 0);
+    const dividaPessoa2 = parseFloat(document.getElementById('dividaPessoa2').value) || 0;
+    const totalIndivPessoa2 = indivPessoa2 + dividaPessoa2;
 
-    const saldoAriele = rendaAriele - (fixoDividido + totalIndivAriele);
-    const saldoCassiano = rendaCassiano - (fixoDividido + totalIndivCassiano);
+    const saldoPessoa1 = rendaPessoa1 - (fixoDividido + totalIndivPessoa1);
+    const saldoPessoa2 = rendaPessoa2 - (fixoDividido + totalIndivPessoa2);
 
-    document.getElementById('resFixoTotal').innerText = totalFixos.toFixed(2);
-    document.getElementById('resFixoDividido').innerText = fixoDividido.toFixed(2);
-    document.querySelectorAll('.resFixoParte').forEach(el => el.innerText = fixoDividido.toFixed(2));
+    document.getElementById('resFixoTotal').innerText = formatarMoeda(totalFixos);
+    document.getElementById('resFixoDividido').innerText = formatarMoeda(fixoDividido);
+    document.querySelectorAll('.resFixoParte').forEach(el => el.innerText = formatarMoeda(fixoDividido));
 
-    document.getElementById('resRendaAriele').innerText = rendaAriele.toFixed(2);
-    document.getElementById('resIndivAriele').innerText = totalIndivAriele.toFixed(2);
-    document.getElementById('resSaldoAriele').innerText = saldoAriele.toFixed(2);
-    document.getElementById('boxAriele').className = saldoAriele >= 0 ? 'alivio' : 'atencao';
+    document.getElementById('resRendaPessoa1').innerText = formatarMoeda(rendaPessoa1);
+    document.getElementById('resIndivPessoa1').innerText = formatarMoeda(totalIndivPessoa1);
+    document.getElementById('resSaldoPessoa1').innerText = formatarMoeda(saldoPessoa1);
+    document.getElementById('boxPessoa1').className = saldoPessoa1 >= 0 ? 'alivio' : 'atencao';
 
-    document.getElementById('resRendaCassiano').innerText = rendaCassiano.toFixed(2);
-    document.getElementById('resIndivCassiano').innerText = totalIndivCassiano.toFixed(2);
-    document.getElementById('resSaldoCassiano').innerText = saldoCassiano.toFixed(2);
-    document.getElementById('boxCassiano').className = saldoCassiano >= 0 ? 'alivio' : 'atencao';
+    document.getElementById('resRendaPessoa2').innerText = formatarMoeda(rendaPessoa2);
+    document.getElementById('resIndivPessoa2').innerText = formatarMoeda(totalIndivPessoa2);
+    document.getElementById('resSaldoPessoa2').innerText = formatarMoeda(saldoPessoa2);
+    document.getElementById('boxPessoa2').className = saldoPessoa2 >= 0 ? 'alivio' : 'atencao';
 
-    const divInvestAriele = document.getElementById('investAriele');
-    if (saldoAriele >= 100) {
-        divInvestAriele.innerHTML = `💡 <strong>Vamos investigar esse dinheiro sobrando?</strong><br>Sugerimos guardar R$ 100,00 na sua <b>Reserva de Emergência</b> este mês!`;
-        divInvestAriele.style.display = 'block';
-    } else { divInvestAriele.style.display = 'none'; }
+    // Resumo combinado do casal — responde "quanto sobra pra nós dois juntos?"
+    const rendaCasal = rendaPessoa1 + rendaPessoa2;
+    const saldoCasal = saldoPessoa1 + saldoPessoa2;
+    document.getElementById('resRendaCasal').innerText = formatarMoeda(rendaCasal);
+    document.getElementById('resSaldoCasal').innerText = formatarMoeda(saldoCasal);
+    document.getElementById('boxCasal').className = saldoCasal >= 0 ? 'alivio' : 'atencao';
 
-    const divInvestCassiano = document.getElementById('investCassiano');
-    if (saldoCassiano >= 100) {
-        divInvestCassiano.innerHTML = `💡 <strong>Vamos investigar esse dinheiro sobrando?</strong><br>Sugerimos guardar R$ 100,00 na sua <b>Reserva de Emergência</b> este mês!`;
-        divInvestCassiano.style.display = 'block';
-    } else { divInvestCassiano.style.display = 'none'; }
+    const divInvestPessoa1 = document.getElementById('investPessoa1');
+    if (saldoPessoa1 >= 100) {
+        divInvestPessoa1.innerHTML = `💡 <strong>Vamos investigar esse dinheiro sobrando?</strong><br>Sugerimos guardar R$ 100,00 na sua <b>Reserva de Emergência</b> este mês!`;
+        divInvestPessoa1.style.display = 'block';
+    } else { divInvestPessoa1.style.display = 'none'; }
 
-    desenharGrafico(totalFixos, totalIndivAriele, totalIndivCassiano);
+    const divInvestPessoa2 = document.getElementById('investPessoa2');
+    if (saldoPessoa2 >= 100) {
+        divInvestPessoa2.innerHTML = `💡 <strong>Vamos investigar esse dinheiro sobrando?</strong><br>Sugerimos guardar R$ 100,00 na sua <b>Reserva de Emergência</b> este mês!`;
+        divInvestPessoa2.style.display = 'block';
+    } else { divInvestPessoa2.style.display = 'none'; }
+
+    desenharGrafico(totalFixos, totalIndivPessoa1, totalIndivPessoa2, nome1, nome2);
     salvarDados();
 }
 
-function desenharGrafico(fixos, ariele, cassiano) {
+// =====================================================
+// GRÁFICO (Chart.js)
+// =====================================================
+
+function desenharGrafico(fixos, valorPessoa1, valorPessoa2, nome1, nome2) {
     const canvas = document.getElementById('chartResumo');
-    if (!canvas) return; 
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
+
     if (meuGrafico) meuGrafico.destroy();
 
     const isDarkMode = document.body.classList.contains('dark-mode');
@@ -180,9 +255,9 @@ function desenharGrafico(fixos, ariele, cassiano) {
     meuGrafico = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Fixos da Casa', 'Contas Ariele', 'Contas Cassiano'],
+            labels: ['Fixos da Casa', `Contas ${nome1}`, `Contas ${nome2}`],
             datasets: [{
-                data: [fixos, ariele, cassiano],
+                data: [fixos, valorPessoa1, valorPessoa2],
                 backgroundColor: ['#3498db', '#9b59b6', '#e67e22'],
                 borderColor: corBorda,
                 borderWidth: 3
@@ -191,27 +266,33 @@ function desenharGrafico(fixos, ariele, cassiano) {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'bottom', labels: { color: corTexto, font: { size: 14 } } } },
-            animation: { duration: 500 } 
+            animation: { duration: 500 }
         }
     });
 }
 
-function salvarDados() {
-    const mesAtual = document.getElementById('seletorMes').value; 
-    if (!mesAtual) return; 
+// =====================================================
+// PERSISTÊNCIA (localStorage, por mês)
+// =====================================================
 
+function salvarDados() {
+    const mesAtual = document.getElementById('seletorMes').value;
+    if (!mesAtual) return;
+
+    const { nome1, nome2 } = obterNomes();
     let bancoDeDados = JSON.parse(localStorage.getItem('planilhaMensalCompleta')) || {};
 
     const dadosDoMes = {
+        nomes: { pessoa1: nome1, pessoa2: nome2 },
         rendas: {
-            salarioAriele: document.getElementById('salarioAriele').value,
-            extraAriele: document.getElementById('extraAriele').value,
-            salarioCassiano: document.getElementById('salarioCassiano').value,
-            extraCassiano: document.getElementById('extraCassiano').value,
+            salarioPessoa1: document.getElementById('salarioPessoa1').value,
+            extraPessoa1: document.getElementById('extraPessoa1').value,
+            salarioPessoa2: document.getElementById('salarioPessoa2').value,
+            extraPessoa2: document.getElementById('extraPessoa2').value,
         },
         dividas: {
-            ariele: document.getElementById('dividaAriele').value,
-            cassiano: document.getElementById('dividaCassiano').value
+            pessoa1: document.getElementById('dividaPessoa1').value,
+            pessoa2: document.getElementById('dividaPessoa2').value
         },
         custosFixos: Array.from(document.querySelectorAll('.conta-fixa')).map(linha => ({
             nome: linha.querySelector('.nome-fixo').value,
@@ -221,15 +302,14 @@ function salvarDados() {
             pago: linha.querySelector('.checkbox-pago').checked,
             obs: linha.querySelector('.obs-fixo').value
         })),
-        // Salvando também a categoria escolhida
-        indivAriele: Array.from(document.querySelectorAll('.conta-indiv-ariele')).map(linha => ({
+        indivPessoa1: Array.from(document.querySelectorAll('.conta-indiv-pessoa1')).map(linha => ({
             nome: linha.querySelector('.nome-indiv').value,
             valor: linha.querySelector('.valor-indiv').value,
             pago: linha.querySelector('.checkbox-pago').checked,
             obs: linha.querySelector('.obs-indiv').value,
             categoria: linha.querySelector('.categoria-indiv').value
         })),
-        indivCassiano: Array.from(document.querySelectorAll('.conta-indiv-cassiano')).map(linha => ({
+        indivPessoa2: Array.from(document.querySelectorAll('.conta-indiv-pessoa2')).map(linha => ({
             nome: linha.querySelector('.nome-indiv').value,
             valor: linha.querySelector('.valor-indiv').value,
             pago: linha.querySelector('.checkbox-pago').checked,
@@ -245,49 +325,58 @@ function salvarDados() {
 function carregarDados() {
     const mesAtual = document.getElementById('seletorMes').value;
     const bancoDeDados = JSON.parse(localStorage.getItem('planilhaMensalCompleta')) || {};
-    const dados = bancoDeDados[mesAtual]; 
-    
+    const dados = bancoDeDados[mesAtual];
+
     document.getElementById('lista-fixos').innerHTML = '';
-    document.getElementById('lista-indiv-ariele').innerHTML = '';
-    document.getElementById('lista-indiv-cassiano').innerHTML = '';
-    document.getElementById('ordenarFixos').value = 'padrao'; 
+    document.getElementById('lista-indiv-pessoa1').innerHTML = '';
+    document.getElementById('lista-indiv-pessoa2').innerHTML = '';
+    document.getElementById('ordenarFixos').value = 'padrao';
 
     if (dados) {
-        document.getElementById('salarioAriele').value = dados.rendas.salarioAriele || '';
-        document.getElementById('extraAriele').value = dados.rendas.extraAriele || '';
-        document.getElementById('salarioCassiano').value = dados.rendas.salarioCassiano || '';
-        document.getElementById('extraCassiano').value = dados.rendas.extraCassiano || '';
-        
-        document.getElementById('dividaAriele').value = (dados.dividas && dados.dividas.ariele) ? dados.dividas.ariele : '';
-        document.getElementById('dividaCassiano').value = (dados.dividas && dados.dividas.cassiano) ? dados.dividas.cassiano : '';
+        document.getElementById('nomePessoa1').value = (dados.nomes && dados.nomes.pessoa1) ? dados.nomes.pessoa1 : '';
+        document.getElementById('nomePessoa2').value = (dados.nomes && dados.nomes.pessoa2) ? dados.nomes.pessoa2 : '';
+
+        document.getElementById('salarioPessoa1').value = dados.rendas.salarioPessoa1 || '';
+        document.getElementById('extraPessoa1').value = dados.rendas.extraPessoa1 || '';
+        document.getElementById('salarioPessoa2').value = dados.rendas.salarioPessoa2 || '';
+        document.getElementById('extraPessoa2').value = dados.rendas.extraPessoa2 || '';
+
+        document.getElementById('dividaPessoa1').value = (dados.dividas && dados.dividas.pessoa1) ? dados.dividas.pessoa1 : '';
+        document.getElementById('dividaPessoa2').value = (dados.dividas && dados.dividas.pessoa2) ? dados.dividas.pessoa2 : '';
 
         if (dados.custosFixos && dados.custosFixos.length > 0) {
             dados.custosFixos.forEach(item => addFixoHTML(item.nome, item.valor, item.data, item.isBase, item.pago, item.obs));
         } else {
-            addFixoHTML('Alimentação Base', '', '', true, false, ''); 
+            addFixoHTML('Alimentação Base', '', '', true, false, '');
         }
 
-        // Carregando com a categoria
-        if(dados.indivAriele) dados.indivAriele.forEach(item => addIndivHTML('ariele', item.nome, item.valor, item.pago, item.obs, item.categoria));
-        if(dados.indivCassiano) dados.indivCassiano.forEach(item => addIndivHTML('cassiano', item.nome, item.valor, item.pago, item.obs, item.categoria));
+        if (dados.indivPessoa1) dados.indivPessoa1.forEach(item => addIndivHTML('pessoa1', item.nome, item.valor, item.pago, item.obs, item.categoria));
+        if (dados.indivPessoa2) dados.indivPessoa2.forEach(item => addIndivHTML('pessoa2', item.nome, item.valor, item.pago, item.obs, item.categoria));
 
     } else {
-        document.getElementById('salarioAriele').value = '';
-        document.getElementById('extraAriele').value = '';
-        document.getElementById('salarioCassiano').value = '';
-        document.getElementById('extraCassiano').value = '';
-        document.getElementById('dividaAriele').value = '';
-        document.getElementById('dividaCassiano').value = '';
-        
+        document.getElementById('nomePessoa1').value = '';
+        document.getElementById('nomePessoa2').value = '';
+        document.getElementById('salarioPessoa1').value = '';
+        document.getElementById('extraPessoa1').value = '';
+        document.getElementById('salarioPessoa2').value = '';
+        document.getElementById('extraPessoa2').value = '';
+        document.getElementById('dividaPessoa1').value = '';
+        document.getElementById('dividaPessoa2').value = '';
+
         addFixoHTML('Alimentação Base', '', '', true, false, '');
     }
-    calcular();
+
+    atualizarNomes();
 }
+
+// =====================================================
+// BACKUP (exportar / importar JSON)
+// =====================================================
 
 function exportarBackup() {
     const dados = localStorage.getItem('planilhaMensalCompleta');
     if (!dados || dados === "{}") { alert('Não há dados salvos para exportar!'); return; }
-    
+
     const blob = new Blob([dados], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -307,11 +396,11 @@ function importarBackup(event) {
             const dadosImportados = JSON.parse(e.target.result);
             localStorage.setItem('planilhaMensalCompleta', JSON.stringify(dadosImportados));
             alert('✅ Backup restaurado com sucesso!');
-            carregarDados(); 
+            carregarDados();
         } catch (erro) {
             alert('❌ Erro: Arquivo inválido.');
         }
-        document.getElementById('fileImport').value = ''; 
+        document.getElementById('fileImport').value = '';
     };
     leitor.readAsText(arquivo);
 }
